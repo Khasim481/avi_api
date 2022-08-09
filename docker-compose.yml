@@ -1,0 +1,39 @@
+version: '3.7'
+
+services:
+  open-sky:
+    container_name: open-sky
+    # restart: always
+    build: .
+    ports:
+      - "5000:5000"
+    command: gunicorn -w 1 -b 0.0.0.0:5000 open-sky:app --log-level=debug
+
+  country-airspace:
+    container_name: country-airspace
+    # restart: always
+    build: .
+    ports:
+      - "5001:5001"
+    # depends_on:
+    #   - open-sky
+    command: gunicorn -w 1 -b 0.0.0.0:5001 country-airspace:app --log-level=debug
+
+  flight-tracker:
+    container_name: flight-tracker
+    # restart: always
+    build: .
+    ports:
+      - "5002:5002"
+    # depends_on:
+    #   - open-sky
+    command: gunicorn -w 1 -b 0.0.0.0:5002 flight-tracker:app --log-level=debug
+  
+  nginx:
+    container_name: nginx
+    # restart: always
+    build: ./nginx
+    ports:
+      - "80:80"
+    # depends_on:
+    #   - open-sky

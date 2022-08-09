@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: avi-api-nginx-deployment
+  labels:
+    app: avi-api-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: avi-api-nginx
+  template:
+    metadata:
+      labels:
+        app: avi-api-nginx
+    spec:
+      containers:
+      - name: avi-api-nginx-container
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: 64Mi
+            cpu: 250m
+          limits:
+            memory: 128Mi
+            cpu: 500m
+        # imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: avi-api-nginx-service
+  labels:
+    run: avi-api-nginx
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+    # nodePort: 30000
+  selector:
+    app: avi-api-nginx
+  type: LoadBalancer
+

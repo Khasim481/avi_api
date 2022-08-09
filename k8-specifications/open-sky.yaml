@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: open-sky-deployment
+  labels:
+    app: open-sky
+spec:
+  selector:
+    matchLabels:
+      app: open-sky
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: open-sky
+    spec:
+      containers:
+      - name: open-sky
+        args:
+          - gunicorn
+          - -b 0.0.0.0:5000
+          - open-sky:app
+          - --worker-class=gevent 
+          - --worker-connections=1000 
+          - --workers=1
+          - --threads=10
+          - --timeout=90
+          - --log-level=debug
+        image: okhasim/avi-api-image
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 5000
+        resources:
+          requests:
+            memory: 64Mi
+            cpu: 250m
+          limits:
+            memory: 128Mi
+            cpu: 500m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: open-sky-service
+  labels:
+    app: open-sky
+spec:
+  ports:
+  - name: http
+    # protocol: TCP
+    port: 5000
+    # targetPort: 5000
+  selector:
+    app: open-sky
+  # type: LoadBalancer
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: open-sky
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: open-sky-deployment
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80

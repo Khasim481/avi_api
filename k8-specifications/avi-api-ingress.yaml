@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: avi-api-ingress
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      ingress.kubernetes.io/rewrite-target: /
+      nginx.ingress.kubernetes.io/use-regex: "true"
+    labels:
+      app: open-sky
+spec:
+  defaultBackend:
+    resource:
+      apiGroup: k8s.example.com
+      kind: StorageBucket
+      name: static-assets
+  rules:
+    - host: avi-api.com
+      http:
+        paths:
+        - path: /get_all_flight_states
+          pathType: Prefix
+          backend:
+            service:
+              name: open-sky-service
+              port:
+                number: 5000
+        - path: /country_air_space
+          pathType: Prefix
+          backend:
+            service:
+              name: country-airspace-service
+              port:
+                number: 5001
+        - path: /track_flight/*
+          pathType: Prefix
+          backend:
+            service:
+              name: flight-tracker-service
+              port:
+                number: 5002

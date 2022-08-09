@@ -1,0 +1,153 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: avi-api-deployment
+  labels:
+    app: avi-api
+spec:
+  selector:
+    matchLabels:
+      app: avi-api
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: avi-api
+    spec:
+      containers:
+      - name: open-sky
+        args:
+          - gunicorn
+          - -b 0.0.0.0:5000
+          - open-sky:app
+          - --worker-class=gevent 
+          - --worker-connections=1000 
+          - --workers=1
+          - --log-level=debug
+        image: okhasim/avi-api-image
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 5000
+        resources:
+          requests:
+            memory: 64Mi
+            cpu: 250m
+          limits:
+            memory: 128Mi
+            cpu: 500m
+      - name: country-airspace-container
+        args:
+          - gunicorn
+          - -b 0.0.0.0:5001
+          - country-airspace:app
+          - --worker-class=gevent 
+          - --worker-connections=1000 
+          - --workers=1
+          - --log-level=debug
+        image: okhasim/avi-api-image
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 5001
+        resources:
+          requests:
+            memory: 64Mi
+            cpu: 250m
+          limits:
+            memory: 128Mi
+            cpu: 500m
+      - name: flight-tracker-container
+        args:
+          - gunicorn
+          - -b 0.0.0.0:5002
+          - flight-tracker:app
+          - --worker-class=gevent 
+          - --worker-connections=1000 
+          - --workers=1
+          - --log-level=debug
+        image: okhasim/avi-api-image
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 5002
+        resources:
+          requests:
+            memory: 64Mi
+            cpu: 250m
+          limits:
+            memory: 128Mi
+            cpu: 500m   
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: avi-api-service
+  labels:
+    app: avi-api
+spec:
+  ports:
+  - name: open-sky
+    port: 5000
+    targetPort: 5000
+  - name: country-airspace
+    port: 5001
+    targetPort: 5001
+  - name: flight-tracker
+    port: 5002
+    targetPort: 5002
+  selector:
+    app: avi-api
+  
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: avi-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: avi-api-deployment
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: avi-api-ingress
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      ingress.kubernetes.io/rewrite-target: /
+      nginx.ingress.kubernetes.io/use-regex: "true"
+    labels:
+      app: avi-api
+spec:
+  defaultBackend:
+    resource:
+      apiGroup: k8s.example.com
+      kind: StorageBucket
+      name: static-assets
+  rules:
+    - host: avi-api.com
+      http:
+        paths:
+        - path: /get_all_flight_states
+          pathType: Prefix
+          backend:
+            service:
+              name: avi-api-service
+              port:
+                number: 5000
+        - path: /country_air_space
+          pathType: Prefix
+          backend:
+            service:
+              name: avi-api-service
+              port:
+                number: 5001
+        - path: /track_flight/*
+          pathType: Prefix
+          backend:
+            service:
+              name: avi-api-service
+              port:
+                number: 5002

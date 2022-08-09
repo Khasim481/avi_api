@@ -1,2 +1,4 @@
 # avi_api
-Kubernetes sample project for showcasing elastic scale 
+
+Sample project with APIs related to Aviation. 
+The main purpose of this project is to understand and demonstrate the usage of Kubernetes 
